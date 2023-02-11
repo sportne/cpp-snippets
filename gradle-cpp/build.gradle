@@ -1,0 +1,59 @@
+// This is a build file attempting to demonstrate the new way of building c++ libraries with gradle
+// More info here: https://docs.gradle.org/current/userguide/cpp_library_plugin.html#sec:cpp_library_tasks
+plugins {
+  id 'cpp-library'
+}
+
+model {
+  platforms {
+    default {
+      architecture "amd64"
+      operatingSystem "linux"
+    }
+  }
+}
+
+task generateCpp(type: Exec) {
+  inputs.files 'src/main/idl'
+  outputs.dir 'src/main/cpp'
+  
+  commandLine 'idl_compiler', '--input-dir=src/main/idl', '--output-dir=src/main/cpp'
+}
+
+library {
+
+  // the compileCpp block can be inside or outside the library 
+  compileCpp {
+    debug {
+      // Enable debugging information
+      cppFlags += "-g"
+    }
+    
+    release {
+      // Enable aggressive optimization
+      cppFlags += "-O3"
+    }
+
+    // The generated C++ files
+    source files generateCpp.outputs.files
+  }
+
+  linkage = [Linkage.STATIC, Linkage.SHARED]
+
+  // Link the dynamic library for ace-tao
+  linkerArgs '-L/usr/local/lib', '-lace-tao'
+
+  // The generated C++ files
+  sources.from 'src/main/cpp'
+
+  // The source files for the IDL
+  sources.from 'src/main/idl'
+
+  targetPlatform 'default'
+}
+
+task printCppFlags {
+  doLast {
+    println cppCompiler.cppFlags
+  }
+}
